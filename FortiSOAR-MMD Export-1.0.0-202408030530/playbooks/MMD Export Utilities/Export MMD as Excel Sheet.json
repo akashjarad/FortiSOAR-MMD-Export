@@ -1,0 +1,236 @@
+{
+    "@type": "Workflow",
+    "triggerLimit": null,
+    "name": "Export MMD as Excel Sheet",
+    "aliasName": null,
+    "tag": null,
+    "description": "This Playbook exports the stagging and Model Metadata from system as an Excel sheet and create file in attachment module.",
+    "isActive": true,
+    "debug": true,
+    "singleRecordExecution": false,
+    "remoteExecutableFlag": false,
+    "parameters": [],
+    "synchronous": false,
+    "collection": "\/api\/3\/workflow_collections\/ded344eb-f7cf-44f2-94e2-3b9b798d33ee",
+    "versions": [],
+    "triggerStep": "\/api\/3\/workflow_steps\/86a88dcb-f9ea-4050-a14b-45f5a612caf6",
+    "steps": [
+        {
+            "@type": "WorkflowStep",
+            "name": "Configuration",
+            "description": null,
+            "arguments": {
+                "MMD_column": "[\n    \"uuid\",\n    \"type\",\n    \"tableName\",\n    \"ownable\",\n    \"userOwnable\",\n    \"queueable\",\n    \"trackable\",\n    \"taggable\",\n    \"peerReplicable\",\n    \"defaultSort\",\n    \"uniqueConstraint\",\n    \"indexable\",\n    \"writable\",\n    \"system\",\n    \"module\",\n    \"softDeleteable\",\n    \"archivable\",\n    \"archivalCriteria\",\n    \"archivalFilters\",\n    \"replicationFilters\",\n    \"enableReplication\",\n    \"displayName\",\n    \"descriptions\",\n]",
+                "Attribute_column": "[\n    \"type\",\n    \"name\",\n    \"length\",\n    \"formType\",\n    \"dataSource\",\n    \"searchable\",\n    \"peerReplicable\",\n    \"system\",\n    \"encrypted\",\n    \"gridColumn\",\n    \"collection\",\n    \"inversedField\",\n    \"ownsRelationship\",\n    \"validation\",\n    \"bulkAction\",\n    \"dataSourceFilters\",\n    \"defaultValue\",\n    \"tooltip\",\n    \"visibility\",\n    \"htmlEscape\",\n    \"readable\",\n    \"writeable\",\n    \"identifier\",\n    \"unique\",\n    \"recommend\",\n    \"uuid\",\n    \"importedBy\",\n    \"displayName\",\n    \"descriptions\",\n]"
+            },
+            "status": null,
+            "top": "165",
+            "left": "125",
+            "stepType": "\/api\/3\/workflow_step_types\/04d0cf46-b6a8-42c4-8683-60a7eaa69e8f",
+            "group": null,
+            "uuid": "1588dfcc-517a-42dd-85e5-77b2148971e5"
+        },
+        {
+            "@type": "WorkflowStep",
+            "name": "Get Model MMD",
+            "description": null,
+            "arguments": {
+                "params": {
+                    "iri": "\/api\/3\/model_metadatas?$limit=2147483647&$orderby=type&$relationships=true",
+                    "body": "",
+                    "method": "GET"
+                },
+                "version": "3.2.6",
+                "connector": "cyops_utilities",
+                "operation": "make_cyops_request",
+                "operationTitle": "FSR: Make FortiSOAR API Call",
+                "step_variables": {
+                    "ModelMMD": "{{vars.steps.Get_Model_MMD.data['hydra:member']}}"
+                }
+            },
+            "status": null,
+            "top": "435",
+            "left": "125",
+            "stepType": "\/api\/3\/workflow_step_types\/0109f35d-090b-4a2b-bd8a-94cbc3508562",
+            "group": null,
+            "uuid": "c08b757d-073b-4646-aa7e-fa4e5ffbe5b8"
+        },
+        {
+            "@type": "WorkflowStep",
+            "name": "Get Staging MMD",
+            "description": null,
+            "arguments": {
+                "params": {
+                    "iri": "\/api\/3\/staging_model_metadatas?$limit=2147483647&$orderby=type&$relationships=true",
+                    "body": "",
+                    "method": "GET"
+                },
+                "version": "3.2.6",
+                "connector": "cyops_utilities",
+                "operation": "make_cyops_request",
+                "operationTitle": "FSR: Make FortiSOAR API Call",
+                "step_variables": {
+                    "StagingMMD": "{{vars.steps.Get_Staging_MMD.data['hydra:member']}}"
+                }
+            },
+            "status": null,
+            "top": "300",
+            "left": "125",
+            "stepType": "\/api\/3\/workflow_step_types\/0109f35d-090b-4a2b-bd8a-94cbc3508562",
+            "group": null,
+            "uuid": "49f1f755-d8c9-49d3-880f-f542121c0398"
+        },
+        {
+            "@type": "WorkflowStep",
+            "name": "Renerate Excel File",
+            "description": null,
+            "arguments": {
+                "name": "Code Snippet",
+                "config": "b5195722-9917-4e6e-ac0f-cddab46620ee",
+                "params": {
+                    "python_function": "import openpyxl\nimport json\nimport pandas as pd\nfrom openpyxl import Workbook\nfrom openpyxl.utils.dataframe import dataframe_to_rows\n\nstaging_mmd = {{vars.StagingMMD}}\nmodel_mmd = {{vars.ModelMMD}}\nstaging_mmd_file = \"FSR-{}-MMD-Export.xlsx\".format(\"Stagging\")\nmodel_mmd_file = \"FSR-{}-MMD-Export.xlsx\".format(\"Model\")\ncolumns_to_add = {{vars.MMD_column}}\n\nattribute_column ={{vars.Attribute_column}}\n\n\ndef write_to_sheet(sheet, data, columns_to_add, start_row):\n    row = start_row\n    for key, value in data.items():\n        if key in columns_to_add:\n            if isinstance(value, dict):\n                value = json.dumps(value)\n            elif isinstance(value, list):\n                value = \", \".join(map(str, value))\n            sheet[f\"A{row}\"] = key\n            sheet[f\"B{row}\"] = value\n            row += 1\n    return row\n\n\ndef write_table_to_sheet(sheet, data, attribute_column, start_row):\n    if not data:\n        return start_row\n\n    headers = data[0].keys()\n    col_num = 1\n    for header in headers:\n        if header in attribute_column:\n            sheet.cell(row=start_row, column=col_num, value=header)\n            col_num += 1\n\n    row_num = start_row + 1\n    for record in data:\n        col_num = 1\n        for key, value in record.items():\n            if key in attribute_column:\n                if isinstance(value, dict):\n                    value = json.dumps(value)\n                elif isinstance(value, list):\n                    value = \", \".join(map(str, value))\n                sheet.cell(row=row_num, column=col_num, value=value)\n                col_num += 1\n        row_num += 1\n\n    return row_num + 1\n\n\ndef generate_excel(mmd_data, columns_to_add, attribute_column, file_name):\n    workbook = openpyxl.Workbook()\n    default_sheet = workbook.active\n    workbook.remove(default_sheet)\n\n    for item in mmd_data:\n        sheet_name = item[\"type\"]\n        sheet = workbook.create_sheet(title=sheet_name)\n        next_row = write_to_sheet(sheet, item, columns_to_add, start_row=1)\n        next_row += 2\n        if \"attributes\" in item:\n            next_row = write_table_to_sheet(\n                sheet, item[\"attributes\"], attribute_column, start_row=next_row\n            )\n\n    workbook.save(\"\/tmp\/\"+file_name)\n\n\ngenerate_excel(staging_mmd, columns_to_add, attribute_column, staging_mmd_file)\ngenerate_excel(model_mmd, columns_to_add, attribute_column, model_mmd_file)\nprint([{\"type\":\"stagging\",\"file\":staging_mmd_file},{\"type\": \"model\",\"file\":model_mmd_file}])\n"
+                },
+                "version": "2.1.0",
+                "connector": "code-snippet",
+                "operation": "python_inline_code_editor",
+                "operationTitle": "Execute Python Code",
+                "pickFromTenant": false,
+                "step_variables": []
+            },
+            "status": null,
+            "top": "570",
+            "left": "125",
+            "stepType": "\/api\/3\/workflow_step_types\/0bfed618-0316-11e7-93ae-92361f002671",
+            "group": null,
+            "uuid": "378caa8a-f4b5-45c8-be54-ed9b639cae62"
+        },
+        {
+            "@type": "WorkflowStep",
+            "name": "Start",
+            "description": null,
+            "arguments": {
+                "route": "c5e25361-3c71-4f09-aed6-e53ff2dd53cf",
+                "title": "Extract MMD as Excel",
+                "resources": [
+                    "alerts",
+                    "incidents"
+                ],
+                "__triggerLimit": true,
+                "inputVariables": [],
+                "step_variables": {
+                    "input": {
+                        "params": [],
+                        "records": "{{vars.input.records}}"
+                    }
+                },
+                "triggerOnSource": true,
+                "executeButtonText": "Execute",
+                "noRecordExecution": true,
+                "showToasterMessage": {
+                    "visible": false,
+                    "messageVisible": true
+                },
+                "triggerOnReplicate": false,
+                "singleRecordExecution": false
+            },
+            "status": null,
+            "top": "30",
+            "left": "125",
+            "stepType": "\/api\/3\/workflow_step_types\/f414d039-bb0d-4e59-9c39-a8f1e880b18a",
+            "group": null,
+            "uuid": "86a88dcb-f9ea-4050-a14b-45f5a612caf6"
+        },
+        {
+            "@type": "WorkflowStep",
+            "name": "Upload File",
+            "description": null,
+            "arguments": {
+                "params": {
+                    "name": "{{vars.item.type}} MMD Export",
+                    "filename": "{{vars.item.file}}",
+                    "description": "MMd data from Fortisoar system",
+                    "request_headers": "",
+                    "multipart_headers": "",
+                    "extra_multipart_fields": ""
+                },
+                "version": "3.2.6",
+                "for_each": {
+                    "item": "{{vars.steps.Renerate_Excel_File.data['code_output']}}",
+                    "parallel": false,
+                    "condition": ""
+                },
+                "connector": "cyops_utilities",
+                "operation": "create_cyops_attachment",
+                "operationTitle": "File: Create Attachment from File",
+                "step_variables": []
+            },
+            "status": null,
+            "top": "700",
+            "left": "120",
+            "stepType": "\/api\/3\/workflow_step_types\/0109f35d-090b-4a2b-bd8a-94cbc3508562",
+            "group": null,
+            "uuid": "c4b55388-855f-4665-ace2-8cfb0f22e896"
+        }
+    ],
+    "routes": [
+        {
+            "@type": "WorkflowRoute",
+            "name": "Configuration -> Get Staging MMD",
+            "targetStep": "\/api\/3\/workflow_steps\/49f1f755-d8c9-49d3-880f-f542121c0398",
+            "sourceStep": "\/api\/3\/workflow_steps\/1588dfcc-517a-42dd-85e5-77b2148971e5",
+            "label": null,
+            "isExecuted": false,
+            "group": null,
+            "uuid": "227714c4-e2e9-4e10-bd10-be8b25224788"
+        },
+        {
+            "@type": "WorkflowRoute",
+            "name": "Get Model MMD -> Renerate Excel File",
+            "targetStep": "\/api\/3\/workflow_steps\/378caa8a-f4b5-45c8-be54-ed9b639cae62",
+            "sourceStep": "\/api\/3\/workflow_steps\/c08b757d-073b-4646-aa7e-fa4e5ffbe5b8",
+            "label": null,
+            "isExecuted": false,
+            "group": null,
+            "uuid": "a73674c6-5f6d-4dcf-940e-8d03781d6a70"
+        },
+        {
+            "@type": "WorkflowRoute",
+            "name": "Get Staging MMD -> Get Model MMD",
+            "targetStep": "\/api\/3\/workflow_steps\/c08b757d-073b-4646-aa7e-fa4e5ffbe5b8",
+            "sourceStep": "\/api\/3\/workflow_steps\/49f1f755-d8c9-49d3-880f-f542121c0398",
+            "label": null,
+            "isExecuted": false,
+            "group": null,
+            "uuid": "41db5415-862c-4ed4-81aa-e5c002460a15"
+        },
+        {
+            "@type": "WorkflowRoute",
+            "name": "Renerate Excel File -> Upload File",
+            "targetStep": "\/api\/3\/workflow_steps\/c4b55388-855f-4665-ace2-8cfb0f22e896",
+            "sourceStep": "\/api\/3\/workflow_steps\/378caa8a-f4b5-45c8-be54-ed9b639cae62",
+            "label": null,
+            "isExecuted": false,
+            "group": null,
+            "uuid": "7dbbbdfe-bddb-4240-a3eb-cb6f4b174a89"
+        },
+        {
+            "@type": "WorkflowRoute",
+            "name": "Start -> Configuration",
+            "targetStep": "\/api\/3\/workflow_steps\/1588dfcc-517a-42dd-85e5-77b2148971e5",
+            "sourceStep": "\/api\/3\/workflow_steps\/86a88dcb-f9ea-4050-a14b-45f5a612caf6",
+            "label": null,
+            "isExecuted": false,
+            "group": null,
+            "uuid": "c84a4f99-f594-449b-87ac-d8661efd2772"
+        }
+    ],
+    "groups": [],
+    "priority": "\/api\/3\/picklists\/2b563c61-ae2c-41c0-a85a-c9709585e3f2",
+    "uuid": "7a4c5d24-a453-4434-8a50-28755870bf04",
+    "owners": [],
+    "isPrivate": false,
+    "deletedAt": null,
+    "recordTags": [
+        "Utility"
+    ]
+}

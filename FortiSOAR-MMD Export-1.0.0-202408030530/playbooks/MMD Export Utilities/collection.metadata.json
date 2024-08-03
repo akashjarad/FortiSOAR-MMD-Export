@@ -1,0 +1,11 @@
+{
+    "@context": "\/api\/3\/contexts\/WorkflowCollection",
+    "@type": "WorkflowCollection",
+    "name": "MMD Export Utilities",
+    "description": "All playbooks related DubaiAirports",
+    "visible": true,
+    "image": null,
+    "uuid": "ded344eb-f7cf-44f2-94e2-3b9b798d33ee",
+    "deletedAt": null,
+    "recordTags": []
+}

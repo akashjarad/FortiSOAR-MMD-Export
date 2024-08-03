@@ -1,0 +1,27 @@
+{
+    "name": "mMDExport",
+    "version": "1.0.0",
+    "fsrMinCompatibility": "7.2.0",
+    "type": "solutionpack",
+    "local": true,
+    "label": "MMD Export",
+    "dependencies": [],
+    "prerequisite": null,
+    "publisher": "Community",
+    "description": "Export the Fortisoar MMD as an Excel File.",
+    "help": null,
+    "category": [
+        "Utilities"
+    ],
+    "supportInfo": null,
+    "iconLarge": null,
+    "postInstallConfig": null,
+    "date": "2024-08-03T13:30:24+00:00",
+    "contents": {
+        "playbooks": [
+            {
+                "name": "MMD Export Utilities"
+            }
+        ]
+    }
+}
